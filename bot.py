@@ -1,17 +1,20 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from datetime import date
+import os
 
-# 🔴 CHANGE KARNA
-API_ID = 30884966
-API_HASH = "9cc40478343e0ef328f7a577b293ac57"
-BOT_TOKEN = "8272441247:AAGLeR2KouANpOXB_AKNnZn6eM2EMG36K-o"
-OWNER_ID = 8423209227
+# 🔐 ENV VARIABLES (GitHub safe)
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+OWNER_ID = int(os.getenv("OWNER_ID"))
 
-app = Client("auto_accept_bot",
-             api_id=API_ID,
-             api_hash=API_HASH,
-             bot_token=BOT_TOKEN)
+app = Client(
+    "auto_accept_bot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
 
 # Stats dictionary
 stats = {
@@ -47,11 +50,13 @@ async def approve_request(client, req):
     users.add(req.from_user.id)
 
     await client.send_message(
-        req.from_user.id, f"""Hello {req.from_user.first_name},
+        req.from_user.id,
+        f"""Hello {req.from_user.first_name},
 
 Your Request to Join {req.chat.title} has been Approved.
 
-Send /start to know more.""")
+Send /start to know more."""
+    )
 
 
 # ✅ /start command with buttons
@@ -60,41 +65,46 @@ async def start_cmd(client, message):
     users.add(message.from_user.id)
 
     buttons = InlineKeyboardMarkup([
-        # Top button
         [
-            InlineKeyboardButton("📢 Bot Updates Channel",
-                                 url="https://t.me/AutoAccepter")
+            InlineKeyboardButton(
+                "📢 Bot Updates Channel",
+                url="https://t.me/AutoAccepter"
+            )
         ],
-        # Middle buttons (left & right)
         [
             InlineKeyboardButton(
                 "➕ Add To Group",
-                url=
-                "https://t.me/AutoAccepter121bot?startgroup=AdBots&admin=invite_users+manage_chat"
+                url="https://t.me/AutoAccepter121bot?startgroup=AdBots&admin=invite_users+manage_chat"
             ),
             InlineKeyboardButton(
                 "➕ Add To Channel",
-                url=
-                "https://t.me/AutoAccepter121bot?startchannel=AdBots&admin=invite_users+manage_chat"
+                url="https://t.me/AutoAccepter121bot?startchannel=AdBots&admin=invite_users+manage_chat"
             )
         ],
-        # Bottom button
-        [InlineKeyboardButton("📊 Statistics", callback_data="stats")]
+        [
+            InlineKeyboardButton(
+                "📊 Statistics",
+                callback_data="stats"
+            )
+        ]
     ])
 
     await message.reply(
         "Add @AutoAccepter121bot To Your Channels To Accept Join Requests Automatically 😊",
-        reply_markup=buttons)
+        reply_markup=buttons
+    )
 
 
 # ✅ Callback for Statistics
 @app.on_callback_query(filters.regex("stats"))
 async def stats_cb(client, cb):
-    await cb.message.edit_text(f"""📊 Statistics
+    await cb.message.edit_text(
+        f"""📊 Statistics
 
 Today Accepted: {stats['today']}
 Monthly Accepted: {stats['month']}
-Total Accepted: {stats['total']}""")
+Total Accepted: {stats['total']}"""
+    )
 
 
 # ✅ Owner command → total active users
