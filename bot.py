@@ -1,6 +1,8 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from datetime import date
+import json
+import os
 
 # 🔴 CHANGE KARNA
 API_ID = 30884966
@@ -13,14 +15,18 @@ app = Client("auto_accept_bot",
              api_hash=API_HASH,
              bot_token=BOT_TOKEN)
 
-# Stats dictionary
-stats = {
-    "today": 0,
-    "month": 0,
-    "total": 0,
-    "date": date.today(),
-    "month_no": date.today().month
-}
+# Stats file
+STATS_FILE = "stats.json"
+
+def load_stats():
+    if not os.path.exists(STATS_FILE):
+        return {}
+    with open(STATS_FILE, "r") as f:
+        return json.load(f)
+
+def save_stats(data):
+    with open(STATS_FILE, "w") as f:
+        json.dump(data, f, indent=4)
 
 # Active users set
 users = set()
@@ -29,20 +35,23 @@ users = set()
 # ✅ Pending Request Auto Accept + Welcome Message
 @app.on_chat_join_request()
 async def approve_request(client, req):
-    global stats
     await client.approve_chat_join_request(req.chat.id, req.from_user.id)
 
-    today = date.today()
-    if stats["date"] != today:
-        stats["today"] = 0
-        stats["date"] = today
-    if stats["month_no"] != today.month:
-        stats["month"] = 0
-        stats["month_no"] = today.month
+    # --- Per-channel statistics ---
+    stats = load_stats()
+    chat_id = str(req.chat.id)
+    today_str = str(date.today())
+    month_str = today_str[:7]  # YYYY-MM
 
-    stats["today"] += 1
-    stats["month"] += 1
-    stats["total"] += 1
+    if chat_id not in stats:
+        stats[chat_id] = {"today": {}, "monthly": {}, "total": 0}
+
+    stats[chat_id]["today"][today_str] = stats[chat_id]["today"].get(today_str, 0) + 1
+    stats[chat_id]["monthly"][month_str] = stats[chat_id]["monthly"].get(month_str, 0) + 1
+    stats[chat_id]["total"] += 1
+
+    save_stats(stats)
+    # --------------------------------
 
     users.add(req.from_user.id)
 
@@ -87,14 +96,66 @@ async def start_cmd(client, message):
         reply_markup=buttons)
 
 
-# ✅ Callback for Statistics
+# ✅ Callback for Statistics (per-channel) + Back button
 @app.on_callback_query(filters.regex("stats"))
 async def stats_cb(client, cb):
-    await cb.message.edit_text(f"""📊 Statistics
+    stats = load_stats()
+    chat_id = str(cb.message.chat.id)
+    today_str = str(date.today())
+    month_str = today_str[:7]
 
-Today Accepted: {stats['today']}
-Monthly Accepted: {stats['month']}
-Total Accepted: {stats['total']}""")
+    if chat_id not in stats:
+        await cb.message.edit_text("No data available for this channel.")
+        return
+
+    today_count = stats[chat_id]["today"].get(today_str, 0)
+    month_count = stats[chat_id]["monthly"].get(month_str, 0)
+    total_count = stats[chat_id]["total"]
+
+    # InlineKeyboard with Back button
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔙 Back", callback_data="start_page")]
+    ])
+
+    await cb.message.edit_text(
+        f"📊 **Channel Statistics**\n\n"
+        f"✅ Today Accepted: {today_count}\n"
+        f"📅 Monthly Accepted: {month_count}\n"
+        f"📈 Total Accepted: {total_count}",
+        reply_markup=buttons
+    )
+
+
+# ✅ Back button handler → show main start buttons
+@app.on_callback_query(filters.regex("start_page"))
+async def back_to_start(client, cb):
+    buttons = InlineKeyboardMarkup([
+        # Top button
+        [
+            InlineKeyboardButton("📢 Bot Updates Channel",
+                                 url="https://t.me/AutoAccepter")
+        ],
+        # Middle buttons
+        [
+            InlineKeyboardButton(
+                "➕ Add To Group",
+                url=
+                "https://t.me/AutoAccepter121bot?startgroup=AdBots&admin=invite_users+manage_chat"
+            ),
+            InlineKeyboardButton(
+                "➕ Add To Channel",
+                url=
+                "https://t.me/AutoAccepter121bot?startchannel=AdBots&admin=invite_users+manage_chat"
+            )
+        ],
+        # Bottom button
+        [InlineKeyboardButton("📊 Statistics", callback_data="stats")]
+    ])
+
+    await cb.message.edit_text(
+        "Add @AutoAccepter121bot To Your Channels To Accept Join Requests Automatically 😊",
+        reply_markup=buttons
+    )
 
 
 # ✅ Owner command → total active users
