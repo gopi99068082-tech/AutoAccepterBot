@@ -104,7 +104,7 @@ async def start_cmd(client, message):
     ])
 
     await message.reply(
-        "Add **@AutoReqAccept1Bot** to your Channel/Group to auto accept join requests 😊",
+        "Add **@autoaccepter121bot** to your Channel/Group to auto accept join requests 😊",
         reply_markup=buttons
     )
 
