@@ -93,11 +93,11 @@ async def start_cmd(client, message):
         [
             InlineKeyboardButton(
                 "➕ Add To Group",
-                url="https://t.me/AutoReqAccept1Bot?startgroup=true&admin=invite_users+manage_chat"
+                url="https://t.me/AutoAccepter121bot?startgroup=true&admin=invite_users+manage_chat"
             ),
             InlineKeyboardButton(
                 "➕ Add To Channel",
-                url="https://t.me/AutoReqAccept1Bot?startchannel=true&admin=invite_users+manage_chat"
+                url="https://t.me/AutoAccepter121bot?startchannel=true&admin=invite_users+manage_chat"
             )
         ],
         [InlineKeyboardButton("📊 Statistics", callback_data="stats")]
