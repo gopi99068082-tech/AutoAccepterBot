@@ -60,7 +60,12 @@ if not stats_col.find_one({"_id": "stats"}):
 # ================== AUTO ACCEPT JOIN REQUEST ==================
 @app.on_chat_join_request()
 async def approve_request(client, req):
-    await client.approve_chat_join_request(req.chat.id, req.from_user.id)
+    try:
+        # Request accept karne ki koshish karega
+        await client.approve_chat_join_request(req.chat.id, req.from_user.id)
+    except Exception:
+        # Agar user pehle se join hai ya request cancel ho gayi, toh error ignore karega aur wapas jayega
+        return
 
     stats = stats_col.find_one({"_id": "stats"})
     today = date.today()
