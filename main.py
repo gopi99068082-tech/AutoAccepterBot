@@ -1,8 +1,26 @@
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import date
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pymongo import MongoClient
+
+# ================== RENDER PORT TIMEOUT FIX ==================
+class HealthCheck(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is Running on Render!")
+
+def run_server():
+    # Render automatically ek PORT variable assign karta hai
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), HealthCheck)
+    server.serve_forever()
+
+# Ise ek alag thread mein chalayenge taaki bot ki speed par asar na pade
+threading.Thread(target=run_server, daemon=True).start()
 
 # ================== ENV VARIABLES ==================
 API_ID = int(os.getenv("API_ID"))
@@ -161,4 +179,5 @@ async def broadcast(client, message):
     )
 
 # ================== RUN ==================
+print("Starting bot...")
 app.run()
