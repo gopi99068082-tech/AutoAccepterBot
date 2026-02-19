@@ -1,9 +1,11 @@
 import os
+import asyncio
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import date
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.errors import FloodWait
 from pymongo import MongoClient
 
 # ================== RENDER PORT TIMEOUT FIX ==================
@@ -90,11 +92,17 @@ async def approve_request(client, req):
     )
 
     try:
+        # Naya Bold Message + Button
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("ADULT 18+ ONLY", url="https://tezlnk.in/")]
+        ])
+        
         await client.send_message(
             req.from_user.id,
-            f"Hello {req.from_user.first_name},\n\n"
-            f"Your request to join **{req.chat.title}** has been approved.\n\n"
-            f"Send /start to use the bot."
+            f"**Hello {req.from_user.first_name},**\n\n"
+            f"**Your Request To Join {req.chat.title} Has Been Approved Successful Using @AutoAccepter121bot.**\n\n"
+            f"**Send /start To Use This Bot.**",
+            reply_markup=buttons
         )
     except:
         pass
@@ -112,14 +120,14 @@ async def start_cmd(client, message):
     )
 
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 Bot Updates", url="https://t.me/AutoAccepter")],
+        [InlineKeyboardButton("📢 Bot Updates", url="https://t.me/+Q6XLvkj1xTQyOWRl")],
         [
             InlineKeyboardButton(
-                "➕ Add To Group",
+                "➕Add To Group",
                 url="https://t.me/AutoAccepter121bot?startgroup=true&admin=invite_users+manage_chat"
             ),
             InlineKeyboardButton(
-                "➕ Add To Channel",
+                "➕Add To Channel",
                 url="https://t.me/AutoAccepter121bot?startchannel=true&admin=invite_users+manage_chat"
             )
         ],
@@ -159,29 +167,52 @@ async def users_cmd(client, message):
     total = users_col.count_documents({})
     await message.reply(f"👥 Total Users (Started Bot): `{total}`")
 
-# ================== /BROADCAST (OWNER ONLY) ==================
+# ================== /BROADCAST (OWNER ONLY - OPTIMIZED) ==================
 @app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
-async def broadcast(client, message):
+async def broadcast_cmd(client, message):
     if not message.reply_to_message:
         return await message.reply("❌ Reply to a message to broadcast")
 
-    sent = 0
-    removed = 0
+    await message.reply("⏳ **Broadcast Started in Background!**\nBot will continue accepting requests normally.")
 
-    for user in users_col.find():
-        user_id = user["user_id"]
-        try:
-            await message.reply_to_message.copy(user_id)
-            sent += 1
-        except:
-            users_col.delete_one({"user_id": user_id})
-            removed += 1
+    async def run_broadcast():
+        sent = 0
+        removed = 0
+        failed = 0
 
-    await message.reply(
-        f"✅ Broadcast Completed\n\n"
-        f"Sent: `{sent}`\n"
-        f"Removed (Blocked): `{removed}`"
-    )
+        for user in users_col.find():
+            user_id = user["user_id"]
+            try:
+                await message.reply_to_message.copy(user_id)
+                sent += 1
+            except FloodWait as e:
+                # Anti-ban logic
+                await asyncio.sleep(e.value + 1)
+                try:
+                    await message.reply_to_message.copy(user_id)
+                    sent += 1
+                except:
+                    failed += 1
+            except Exception:
+                # Agar blocked/deleted hai
+                users_col.delete_one({"user_id": user_id})
+                removed += 1
+
+            # 20 msg/sec speed limiter
+            if (sent + removed + failed) % 20 == 0:
+                await asyncio.sleep(1)
+
+        # Broadcast report to Owner
+        await client.send_message(
+            OWNER_ID,
+            f"✅ **Broadcast Completed**\n\n"
+            f"🟢 Sent: `{sent}`\n"
+            f"🔴 Removed (Blocked/Deleted): `{removed}`\n"
+            f"🟡 Failed: `{failed}`"
+        )
+
+    # Ise background thread/task mein daal diya taaki bot freeze na ho
+    asyncio.create_task(run_broadcast())
 
 # ================== RUN ==================
 print("Starting bot...")
