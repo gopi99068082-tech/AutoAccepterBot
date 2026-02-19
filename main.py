@@ -100,7 +100,7 @@ async def approve_request(client, req):
         await client.send_message(
             req.from_user.id,
             f"**Hello {req.from_user.first_name},**\n\n"
-            f"**Your Request To Join {req.chat.title} Has Been Approved Successful Using @AutoAccepter121bot.**\n\n"
+            f"**Your Request To Join {req.chat.title} Has Been Approved Successfully Using @AutoAccepter121bot**\n\n"
             f"**Send /start To Use This Bot.**",
             reply_markup=buttons
         )
